@@ -1,8 +1,9 @@
 import json
 import os
 import asyncio
-
+from tqdm import tqdm
 from lightrag.prompt import PROMPTS
+
 import prompt_patch
 
 # Override the entity_extraction prompt
@@ -83,18 +84,16 @@ async def insert(batch_size: int = 32):
     with open("Webiks_Hebrew_RAGbot_KolZchut_Paragraphs_Chunked.json", "w", encoding="utf-8") as f:
         json.dump(chunked_dataset, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ Created {len(chunked_dataset)} chunked entries from {len(sampled)} original paragraphs")
+    tqdm.write(f"✅ Created {len(chunked_dataset)} chunked entries from {len(sampled)} original paragraphs")
 
     # Insert in batches asynchronously
-    for i in range(0, len(chunked_dataset), batch_size):
+    for i in tqdm(range(0, len(chunked_dataset), batch_size), desc="📦 Inserting batches"):
         batch = chunked_dataset[i: i + batch_size]
-        # texts = [row["content"] for row in batch]
-        # await rag.ainsert(texts)
         inputs = []
         file_paths = []
         ids = []
 
-        for j, row in enumerate(batch):
+        for j, row in enumerate(tqdm(batch, desc=f"  🔹 Batch {i // batch_size + 1}", leave=False)):
             content = row["content"]
             doc_id = str(row["doc_id"])  # ensure it's a string
             title = clean_text(row["title"])
@@ -110,10 +109,10 @@ async def insert(batch_size: int = 32):
             ids=ids
         )
 
-        print(f"Inserted batch {i // batch_size + 1} / {((len(chunked_dataset) - 1) // batch_size) + 1}")
+        tqdm.write(f"✅ Inserted batch {i // batch_size + 1} / {((len(chunked_dataset) - 1) // batch_size) + 1}")
 
     await rag.finalize_storages()
-    print("All chunks inserted and storage finalized.")
+    tqdm.write("🎉 All chunks inserted and storage finalized.")
 
 
 if __name__ == "__main__":
